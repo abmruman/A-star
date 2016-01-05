@@ -88,22 +88,15 @@ int main(){
 
 	cout << "\n\n";
 
-	cout << "\nEnter heuristic values: " << endl;
-    for (int i = 0; i < nodeNumber; i++){
-		Node &node = graph.nodes[i];
-
-		cout << i + 1 << ". " << graph.nodes[i].name << ": \n";
-        cin >> node.heuristic;
-		cout << endl;
-	}
-
-	cout << "\n\n";
-
 	/** Takes input for neighbor cities **/
 	for (int i = 0; i < nodeNumber; i++){
+        Node &node = graph.nodes[i];
 		int connected;
 
-		cout << i + 1 << ". " << graph.nodes[i].name << "\n";
+		cout << i + 1 << ". " << node.name << "\n";
+        cout << "\nEnter heuristic values: ";
+        cin >> node.heuristic;
+        node.pathCost = node.heuristic;
 
 		cout << "Number of connected nodes: ";
 		cin >> connected;
@@ -118,10 +111,11 @@ int main(){
 			Edge e = {&graph.nodes[id - 1], cost};
 			graph.nodes[i].edges.push_back(e);
 		}
+        cout << "\n";
 	}
 
 
-	cout << "\n\nGraph: (Heuristic)\n";
+	cout << "\n\nGraph: (with Heuristic)\n";
 
 	for (int i = 0; i < nodeNumber; i++){
 		Node &node = graph.nodes[i];
@@ -143,11 +137,23 @@ int main(){
 	cout << "\nEnter goal node no.: ";
     cin >> goalNode;
 
-    cout << "\n\nA* search:\n\n";
+    if(graph.nodes[goalNode-1].heuristic>0){
+        cout << "\n\n** heuristic values are not targeted to ("<<graph.nodes[goalNode-1].name<< ") be a goal node.\n\n";
+    }
+    cout << "\n\nA* search:";
 
 	if(aStar(&graph.nodes[startNode-1], &graph.nodes[goalNode-1])){
         Node *node;
-        cout << "Path: " ;
+        cout << "\n\nExplored list: " ;
+
+        for (int i = 0; i < explored.size()-1; i++){
+            node = explored[i];
+            cout << "("<< node->number << ". "<< node->name << ") -> ";
+        }
+        node = explored[explored.size()-1];
+        cout << "("<< node->number << ". "<< node->name << ")";
+
+        cout << "\n\nA* Path: " ;
         if(!solution.empty()){
             while(true){
                 node = solution.top();
@@ -168,7 +174,43 @@ int main(){
 }
 
 bool aStar(Node *startNode, Node *goalNode) {
+    //startNode->pathCost = 0;
+    startNode->state = VISITING;
+    frontier.push(startNode);
 
+    while(!frontier.empty()){
+        Node *node = frontier.top();
+        frontier.pop();
+
+        //cout << node->name << " " << node->pathCost <<endl;
+        if(node == goalNode){
+            makeSolution(node);
+            return true;
+        }
+        node->state = VISITED;
+        explored.push_back(node);
+
+        size_t numOfChild = node->edges.size();
+        for(int i=0; i<numOfChild; i++){
+            Edge edge = node->edges[i];
+            Node *child = edge.endNode;
+            int pathCost = node->pathCost - node->heuristic + edge.cost + child->heuristic;
+
+            if(child->state == UNVISITED){
+                child->pathCost = pathCost;
+                child->parent = node;
+                child->state = VISITING;
+                frontier.push(child);
+                //cout << "\t" << child->name << " " << child->pathCost << endl;
+            }
+            else if(child->state==VISITING && child->pathCost > pathCost){
+                //cout << "\t" << child->name << " " << child->pathCost << " " << pathCost <<endl;
+                child->pathCost = pathCost;
+                child->parent = node;
+                refreshFrontier();
+            }
+        }
+    }
     return false;
 }
 
